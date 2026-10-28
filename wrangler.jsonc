@@ -1,0 +1,6 @@
+{
+  // Sitio estático en Cloudflare Workers: sirve los archivos de esta carpeta
+  "name": "pastorainvaders",
+  "compatibility_date": "2025-09-01",
+  "assets": { "directory": "./" }
+}
