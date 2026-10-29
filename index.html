@@ -108,7 +108,7 @@ body{touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-c
   "maxBullets": 4,
   "allyFirst": 14,
   "allyEvery": [40, 60],
-  "powerDropChance": 0.08,
+  "powerDropChance": 0.15,
   "levels": [
     {"name":"EL ESCÁNDALO DEL HUACO","entry":"¡HAN DESCUBIERTO QUE LOS HUACOS TIENEN SEXO!","bg":"bg_desierto","sky":["#f2a65a","#f6d38b"],
      "enemies":["e1a","e1b","e1c","e1d","e1e","e1f","e1g"],"rows":3,"cols":5,"speed":15,"drop":12,"fire":2.3,"style":"censor","shot":"clay",
@@ -413,7 +413,7 @@ function hitEnemy(e, lv) {
   boom(e.x, e.y);
   if (Math.random() < CFG.powerDropChance) drop(pick(['pw_mayoria', 'pw_decreto', 'pw_confianza', 'pw_fe']), e.x, e.y);
   // fila completa
-  if (!e.small && !G.rowsDone[e.row] && G.enemies.filter(o => o.row === e.row && !o.small).every(o => !o.alive)) { G.rowsDone[e.row] = true; addScore(CFG.points.row); floatText('¡FILA REGULADA! +' + CFG.points.row * G.mult, 180, e.y, COL.pink, 8); }
+  if (!e.small && !G.rowsDone[e.row] && G.enemies.filter(o => o.row === e.row && !o.small).every(o => !o.alive)) { G.rowsDone[e.row] = true; addScore(CFG.points.row); drop(pick(['pw_mayoria', 'pw_decreto', 'pw_confianza', 'pw_fe']), e.x, e.y); floatText('¡FILA REGULADA! +' + CFG.points.row * G.mult, 180, e.y, COL.pink, 8); }
 }
 function countHit() { G.streak++; G.mult = Math.min(5, 1 + Math.floor(G.streak / 10)); if (G.streak % 10 === 0 && G.mult <= 5) floatText('MULTIPLICADOR ×' + G.mult, G.px, FEET - 90, COL.cyan, 8); }
 function drop(k, x, y) { G.drops.push({ k, x, y, vy: k === 'pw_bill' ? 85 : 70, w: 22, h: 18, t: 0 }); }
