@@ -210,8 +210,10 @@ const ASSETS = ['p_idle1','p_idle2','p_walk1','p_walk2','p_walk3','p_walk4','p_s
   'bg_congreso','bg_desierto','bg_aula','bg_ciudad',
   'b1_idle','b1_att1','b1_att2','b1_dmg','b1_die','b2_idle','b2_att1','b2_att2','b2_dmg','b2_die',
   'b3_idle','b3_att1','b3_dmg','b3_die','b4_idle','b4_att1','b4_att2','b4_dmg','b4_die','b5_idle','b5_att1','b5_att2','b5_dmg','b5_cens'];
+// súbelo en 1 cada vez que cambies imágenes, para que los navegadores no usen las viejas
+const ASSET_V = 2;
 let loaded = 0;
-for (const k of ASSETS) { const im = new Image(); im.onload = im.onerror = () => { loaded++; }; im.src = 'assets/' + k + '.png'; IMG[k] = im; }
+for (const k of ASSETS) { const im = new Image(); im.onload = im.onerror = () => { loaded++; }; im.src = 'assets/' + k + '.png?v=' + ASSET_V; IMG[k] = im; }
 const ok = k => IMG[k] && IMG[k].complete && IMG[k].naturalWidth > 0;
 // sprite anclado abajo al centro
 function spr(k, cx, by, s, o = {}) {
