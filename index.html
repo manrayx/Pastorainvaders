@@ -124,8 +124,10 @@ body{touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-c
      "boss":{"key":"b4","hp":22,"name":"LA LIBERTAD ARTÍSTICA","scale":1.2,"fire":1.1},"win":"ARTE APROBADO: SOLO PAISAJES Y FLOREROS"},
     {"name":"DERECHOS BAJO DECRETO","entry":"¡QUEDAN DEMASIADAS DECISIONES PERSONALES!","bg":"bg_congreso","sky":["#0e1530","#26305a"],
      "enemies":["e5a","e5b","e5c","e5d","e5e","e5f"],"rows":3,"cols":4,"speed":22,"drop":14,"fire":1.6,"style":"pop","shot":"paper","split":true,
-     "boss":{"key":"b5","hp":30,"name":"LA CONSTITUCIÓN","scale":1.2,"fire":1.0},"win":"¡YA TODO ESTÁ REGULADO!"}
+     "boss":{"key":"b5","hp":30,"name":"LA CONSTITUCIÓN","scale":1.2,"fire":1.0},"win":"¡YA TODO ESTÁ REGULADO!"},
+    {"name":"MATERNIDAD OBLIGATORIA","entry":"¡TODAVÍA HAY NIÑAS CON PLANES PROPIOS!","mode":"final"}
   ],
+  "final": {"duration": 60, "close": 5},
   "points": {"common":10, "fast":20, "row":100, "boss":500, "noDamage":250, "bill":50, "allLevels":1000}
 }
 </script>
@@ -209,9 +211,12 @@ const ASSETS = ['p_idle1','p_idle2','p_walk1','p_walk2','p_walk3','p_walk4','p_s
   'e4a','e4b','e4c','e4d','e4e','e4f','e4g','e5a','e5b','e5c','e5d','e5e','e5f',
   'bg_congreso','bg_desierto','bg_aula','bg_ciudad',
   'b1_idle','b1_att1','b1_att2','b1_dmg','b1_die','b2_idle','b2_att1','b2_att2','b2_dmg','b2_die',
-  'b3_idle','b3_att1','b3_dmg','b3_die','b4_idle','b4_att1','b4_att2','b4_dmg','b4_die','b5_idle','b5_att1','b5_att2','b5_dmg','b5_cens'];
+  'b3_idle','b3_att1','b3_dmg','b3_die','b4_idle','b4_att1','b4_att2','b4_dmg','b4_die','b5_idle','b5_att1','b5_att2','b5_dmg','b5_cens',
+  'n6_baby0','n6_baby1','n6_baby2','n6_baby3','n6_baby_burst','n6_casa','n6_dest_edu','n6_dest_salud','n6_dest_futuro',
+  'n6_hit0','n6_hit1','n6_hit2','n6_hit3','n6_hit4','n6_f_idle1','n6_f_idle2','n6_f_walk1','n6_f_walk2','n6_f_walk3','n6_f_shoot1','n6_f_shoot2',
+  ...[0,1,2,3,4,5,6].flatMap(i => ['n6_g' + i + '_happy', 'n6_g' + i + '_sad']), ...[0,1,2,3,4,5].map(i => 'n6_g' + i + '_div')];
 // súbelo en 1 cada vez que cambies imágenes, para que los navegadores no usen las viejas
-const ASSET_V = 3;
+const ASSET_V = 4;
 let loaded = 0;
 for (const k of ASSETS) { const im = new Image(); im.onload = im.onerror = () => { loaded++; }; im.src = 'assets/' + k + '.png?v=' + ASSET_V; IMG[k] = im; }
 const ok = k => IMG[k] && IMG[k].complete && IMG[k].naturalWidth > 0;
@@ -277,13 +282,16 @@ function newGame() {
     bullets: [], ebullets: [], fx: [], drops: [], floats: [], dying: [],
     rapidT: 0, tripleT: 0, freezeT: 0, wide: 0, shield: 0, ally: null, allyT: CFG.allyFirst,
     shake: 0, banner: null, ending: null, overT: 0, maxLevel: 1, flash: 0 };
-  MUSIC.on = true; startLevel(0); setScene('play');
+  // atajo de prueba: abrir el juego con #nivel6 (o #nivel2…) empieza en ese nivel
+  let start = 0; try { const m = /^#nivel(\d)$/.exec(location.hash); if (m) start = clamp(+m[1] - 1, 0, CFG.levels.length - 1); } catch (e) {}
+  MUSIC.on = true; startLevel(start); setScene('play');
 }
 function L() { return CFG.levels[G.level]; }
 function startLevel(i) {
   G.level = i; G.maxLevel = Math.max(G.maxLevel, i + 1); G.lostInLevel = false; G.gray = false; G.bq = [];
   const lv = CFG.levels[i]; G.enemies = []; G.boss = null; G.phase = 'intro'; G.phaseT = 0;
   G.bullets = []; G.ebullets = []; G.drops = []; G.dying = [];
+  if (lv.mode === 'final') { startFinal(); G.banner = { t: 0, life: 2.6, kind: 'level' }; return; }
   const cols = lv.cols, rows = lv.rows, sx = cols >= 6 ? 50 : cols === 4 ? 66 : 58, sy = 46;
   for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
     const k = lv.enemies[(r * cols + c * 3 + r) % lv.enemies.length];
@@ -321,6 +329,13 @@ function updatePlay(dt) {
   if (G.banner) { G.banner.t += dt; if (G.banner.t > G.banner.life) { const b = G.banner; G.banner = null; if (b.done) b.done(); if (!G.banner && G.bq && G.bq.length) G.banner = G.bq.shift(); } }
   else if (G.bq && G.bq.length) G.banner = G.bq.shift();
   if (G.phase === 'intro' && G.phaseT > 2.2) { G.phase = 'wave'; G.phaseT = 0; }
+  if (lv.mode === 'final') {
+    const left = keys.ArrowLeft || keys.a || keys.A || touch.left, right = keys.ArrowRight || keys.d || keys.D || touch.right;
+    G.moving = false; G.fireCd -= dt; G.shotT += dt;
+    if (!G.f6.ended) { if (left && !right) { G.px -= 220 * dt; G.pdir = -1; G.moving = true; } if (right && !left) { G.px += 220 * dt; G.pdir = 1; G.moving = true; } }
+    G.px = clamp(G.px, 28, 332); if (G.moving) G.walkT += dt;
+    updateFinal(dt); return;
+  }
   // jugadora
   const left = keys.ArrowLeft || keys.a || keys.A || touch.left, right = keys.ArrowRight || keys.d || keys.D || touch.right;
   const canAct = G.phase !== 'clear' && G.phase !== 'dead';
@@ -534,6 +549,113 @@ function drawAlly(A) {
   if (A.t % .8 < .5) T('$', x + 18 * A.d, y + 10, { size: 8, font: F1, color: '#3ddc84' });
 }
 
+/* ---------- nivel 6: MATERNIDAD OBLIGATORIA (minijuego de carriles) ---------- */
+// Niñas avanzan hacia EDUCACIÓN, SALUD o FUTURO. 1 impacto: triste, con bebé y lenta. 2 impactos: va a LA CASA DEL PADRE.
+const F6 = { lanes: [60, 180, 300], top: 128, spawnY: 482, door: [44, 540], shot: .35, speed: 300, walk: 40, slow: 20, back: 55, pts: [50, 100, 200] };
+const DEST = [['n6_dest_edu', 'EDUCACIÓN', '#facc15'], ['n6_dest_salud', 'SALUD', '#ff6b6b'], ['n6_dest_futuro', 'FUTURO', '#4ade80']];
+function startFinal() {
+  Object.assign(G, { f6: { t: 0, next: 1.2, girls: [], count: [0, 0, 0, 0], ended: false, endT: 0, panel: false, id: 0 }, ally: null, rapidT: 0, tripleT: 0, freezeT: 0, wide: 0 });
+}
+function f6Every(t) { return t < 15 ? 3 : t < 35 ? 2 : t < 50 ? 1.5 : 1; }
+function spawnGirl() {
+  const F = G.f6, busy = l => F.girls.filter(g => g.lane === l && g.state !== 'div' && g.y > 380).length;
+  let lane = (Math.random() * 3) | 0; for (let i = 0; i < 3 && busy(lane) >= 1; i++) lane = (lane + 1) % 3;
+  const v = (Math.random() * 7) | 0;
+  F.girls.push({ id: F.id++, lane, v, x: F6.lanes[lane], y: F6.spawnY, hits: 0, state: 'walk', t: rand(0, 1), fx: 0 });
+}
+function updateFinal(dt) {
+  const F = G.f6;
+  if (G.phase === 'intro') return;
+  if (!F.ended) {
+    F.t += dt; F.next -= dt;
+    if (F.t < CFG.final.duration && F.next <= 0) { spawnGirl(); F.next = f6Every(F.t); }
+    if (F.t >= CFG.final.duration && !F.closing) { F.closing = true; F.closeT = 0; }
+    if (F.closing) { F.closeT += dt; if (F.closeT >= CFG.final.close || !F.girls.length) endFinal(); }
+  }
+  // disparo: bebés en línea recta hacia arriba
+  const firing = keys[' '] || keys.Space || touch.fire;
+  if (firing && !F.ended && G.fireCd <= 0) { G.fireCd = F6.shot; G.shotT = 0; G.bullets.push({ x: G.px + 6, y: FEET - 52, vx: 0, w: 14, h: 14, k: 'n6_baby0', hits: 0, f6: true }); SFX.shoot(); }
+  for (const b of G.bullets) b.y -= F6.speed * dt;
+  // niñas
+  for (const g of F.girls) {
+    g.t += dt; g.fx -= dt;
+    if (g.state === 'div') {
+      const dx = F6.door[0] - g.x, dy = F6.door[1] - g.y, d = Math.hypot(dx, dy);
+      if (d < 4) { g.done = true; F.count[3]++; addScore(F6.pts[2], F6.door[0] + 30, F6.door[1] - 40); SFX.bill(); continue; }
+      g.x += dx / d * F6.back * dt; g.y += dy / d * F6.back * dt;
+    } else {
+      g.y -= (g.hits ? F6.slow : F6.walk) * dt;
+      if (g.y <= F6.top) { g.done = true; F.count[g.lane]++; SFX.click(); }
+    }
+  }
+  for (const b of G.bullets) for (const g of F.girls) {
+    if (b.dead || g.done || g.state === 'div') continue;
+    if (Math.abs(b.x - g.x) < 15 && b.y < g.y && b.y > g.y - 44) {
+      b.dead = true; g.hits++; SFX.hit(); G.fx.push({ k: 'n6_hit' + ((Math.random() * 5) | 0), x: g.x, y: g.y - 26, t: 0, life: .35, s: .38 });
+      addScore(F6.pts[g.hits - 1], g.x, g.y - 50);
+      if (g.hits >= 2) { g.state = 'div'; g.fx = .6; G.censored++; }
+    }
+  }
+  F.girls = F.girls.filter(g => !g.done);
+  G.bullets = G.bullets.filter(b => !b.dead && b.y > HUD);
+  if (F.ended) { F.endT += dt; if (F.endT > 1.4) F.panel = true; }
+}
+function endFinal() { const F = G.f6; F.ended = true; F.endT = 0; F.girls = []; G.bullets = []; SFX.win(); }
+function drawFinalBg() {
+  R(0, HUD, W, FEET - HUD, '#4b5568'); R(0, HUD, W, 84, '#6aa3d8');
+  for (let i = 0; i < 6; i++) R(20 + i * 64, HUD + 10 + (i % 2) * 8, 26, 6, '#ffffffaa');
+  R(0, HUD + 78, W, 6, '#3b6f3b');
+  // carriles con flechas de color
+  for (let l = 0; l < 3; l++) {
+    const x = F6.lanes[l], c = DEST[l][2];
+    ctx.globalAlpha = .55; for (let y = F6.top + 14; y < FEET - 60; y += 22) R(x - 2, y, 4, 12, c);
+    ctx.fillStyle = c; ctx.beginPath(); ctx.moveTo(x, F6.top + 2); ctx.lineTo(x - 9, F6.top + 14); ctx.lineTo(x + 9, F6.top + 14); ctx.closePath(); ctx.fill(); ctx.globalAlpha = 1;
+  }
+  for (const x of [120, 240]) for (let y = F6.top + 6; y < FEET - 10; y += 30) R(x - 1, y, 2, 14, '#ffffff22');
+  for (let l = 0; l < 3; l++) { sprC(DEST[l][0], F6.lanes[l], HUD + 44, .5); }
+  // LA CASA DEL PADRE, abajo a la izquierda
+  spr('n6_casa', 46, FEET + 2, .36);
+  R(4, FEET - 76, 86, 14, '#2b1a10'); R(5, FEET - 75, 84, 12, '#d9c39a');
+  T('LA CASA DEL PADRE', 47, FEET - 72, { size: 5, font: F1, align: 'center', color: '#2b1a10' });
+  R(0, FEET, W, CTRL - FEET, '#2b2f3a'); R(0, FEET, W, 2, '#5a6070');
+}
+function drawFinal() {
+  const F = G.f6;
+  drawFinalBg();
+  const sorted = [...F.girls].sort((a, b) => (a.state === 'div') - (b.state === 'div') || a.y - b.y);
+  for (const g of sorted) {
+    const bob = Math.sin(g.t * (g.hits ? 6 : 10)) > 0 ? 0 : 1;
+    const k = g.state === 'div' ? 'n6_g' + (g.v % 6) + '_div' : 'n6_g' + g.v + (g.hits ? '_sad' : '_happy');
+    spr(k, g.x, g.y + bob, .37, { flip: g.state === 'div' && g.x > F6.door[0] + 20 && false });
+    if (g.state === 'div' && g.fx > 0) { sprC('n6_baby1', g.x - 10, g.y - 56 - (0.6 - g.fx) * 20, .3, { alpha: g.fx / .6 }); sprC('n6_baby2', g.x + 10, g.y - 56 - (0.6 - g.fx) * 20, .3, { alpha: g.fx / .6 }); }
+  }
+  for (const b of G.bullets) { ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(Math.sin(sceneT * 12 + b.x) * .3); sprC('n6_baby' + (Math.floor(sceneT * 8) % 4), 0, 0, .34); ctx.restore(); }
+  // pastora con bebés
+  let k = 'n6_f_idle' + (1 + Math.floor(sceneT * 1.6) % 2);
+  if (F.ended) k = 'p_win' + (1 + Math.floor(sceneT * 4) % 2);
+  else if (G.shotT < .22) k = G.shotT < .11 ? 'n6_f_shoot1' : 'n6_f_shoot2';
+  else if (G.moving) k = 'n6_f_walk' + (1 + Math.floor(G.walkT * 9) % 3);
+  const big = k.startsWith('n6_f_shoot1');
+  spr(k, G.px + (big ? 18 * G.pdir : 0), FEET + 2, k.startsWith('p_') ? .5 : .44, { flip: G.pdir < 0 });
+  for (const f of G.fx) { const p = f.t / f.life; sprC(f.k, f.x, f.y, f.s * (0.7 + p * .5), { alpha: 1 - p * .7 }); }
+}
+function drawFinalPanel() {
+  const F = G.f6, a = ease((G.f6.endT - 1.4) / .4);
+  ctx.save(); ctx.globalAlpha = a;
+  R(0, HUD, W, FEET - HUD, 'rgba(5,7,13,.82)');
+  T('¡MISIÓN CUMPLIDA!', 180, 120, { size: 15, font: F1, align: 'center', color: COL.gold, outline: COL.ink, ow: 6 });
+  T('HAS SALVADO A TODAS', 180, 150, { size: 9, font: F1, align: 'center', color: '#fff' });
+  const rows = [['EDUCACIÓN', F.count[0], '#facc15'], ['SALUD', F.count[1], '#ff6b6b'], ['FUTURO', F.count[2], '#4ade80'], ['ALBERGUE', F.count[3], COL.orange]];
+  rows.forEach((r, i) => { const y = 190 + i * 30; rr(40, y, 280, 24, 6, COL.panel, COL.line, 1); R(40, y, 6, 24, r[2]); T(r[0], 56, y + 7, { size: 8, font: F1, color: '#fff' }); T(String(r[1]), 304, y + 6, { size: 11, font: F1, align: 'right', color: r[2] }); });
+  T('¿QUIÉN DECIDIÓ POR ELLAS?', 180, 322, { size: 10, font: F1, align: 'center', color: COL.red, outline: COL.ink, ow: 4 });
+  ctx.restore();
+  if (a > .9) {
+    const r1 = [30, 360, 145, 46], r2 = [185, 360, 145, 46];
+    btn(r1, 'REINTENTAR', 'gray', { size: 9 }); addUI(r1, () => { startLevel(G.level); });
+    btn(r2, 'CONTINUAR', 'gold', { size: 9 }); addUI(r2, () => { G.score += CFG.points.allLevels; startFinale(); });
+  }
+}
+
 /* ---------- final verdadero ---------- */
 function startFinale() { MUSIC.on = false; G.fin = { huacoY: HUD + 10 }; setScene('finale'); track('final-verdadero'); }
 function updateFinale(dt) {
@@ -644,6 +766,7 @@ function drawDying(d) {
 }
 function drawPlay() {
   const lv = L();
+  if (lv.mode === 'final') { drawFinal(); for (const f of G.floats) T(f.s, f.x, f.y, { size: f.size, font: F1, align: 'center', color: f.c, outline: COL.ink, ow: 3, alpha: 1 - f.t / f.life }); drawHUD(); drawControls(); drawBanner(); if (G.f6.panel) drawFinalPanel(); return; }
   const sh = G.shake > 0 ? G.shake * 5 : 0;
   ctx.save(); if (sh) ctx.translate(rand(-sh, sh), rand(-sh, sh));
   ctx.save(); if (G.gray) ctx.filter = 'grayscale(1)';
@@ -702,6 +825,14 @@ function drawHUD() {
   T(pad(G.score, 6), 10, 19, { size: 12, font: F1, color: COL.gold });
   T('NIVEL', 108, 7, { size: 6, font: F1, color: COL.muted });
   T(pad(G.level + 1, 2), 108, 19, { size: 12, font: F1, color: '#fff' });
+  if (L().mode === 'final') {
+    const left = Math.max(0, CFG.final.duration - G.f6.t);
+    T('TIEMPO', 170, 7, { size: 6, font: F1, color: COL.muted }); T(mmss(Math.ceil(left)), 170, 19, { size: 12, font: F1, color: left < 10 ? COL.red : '#fff' });
+    const pr = [300, 8, 26, 26], mr = [330, 8, 26, 26];
+    rr(pr[0], pr[1], pr[2], pr[3], 5, COL.panel2); R(309, 15, 3, 12, '#fff'); R(315, 15, 3, 12, '#fff'); addUI(pr, pauseGame);
+    rr(mr[0], mr[1], mr[2], mr[3], 5, COL.panel2); drawSpeaker(336, 15, muted); addUI(mr, toggleMute);
+    return;
+  }
   for (let i = 0; i < CFG.lives; i++) heart(162 + i * 18, 24, 2, i < G.lives ? COL.red : '#3a4466');
   // barra de poder
   T('PODER', 222, 7, { size: 6, font: F1, color: COL.muted });
@@ -728,8 +859,9 @@ function drawControls() {
   arrow(45, CTRL + 38, -1); arrow(121, CTRL + 38, 1);
   const on = touch.fire || keys[' '];
   rr(CB.fire[0], CB.fire[1] + (on ? 2 : 0), CB.fire[2], CB.fire[3] - 2, 10, on ? COL.red2 : COL.red, COL.ink, 2);
-  sprC('pl2', 220, CTRL + 37 + (on ? 2 : 0), .3);
-  T('DECRETO', 284, CTRL + 31 + (on ? 2 : 0), { size: 9, font: F1, align: 'center', color: '#fff' });
+  const fin = G && L().mode === 'final';
+  sprC(fin ? 'n6_baby0' : 'pl2', 220, CTRL + 37 + (on ? 2 : 0), fin ? .5 : .3);
+  T(fin ? 'DISPARAR' : 'DECRETO', 284, CTRL + 31 + (on ? 2 : 0), { size: 9, font: F1, align: 'center', color: '#fff' });
 }
 function drawBanner() {
   const b = G.banner; if (!b) return;
@@ -897,7 +1029,7 @@ function drawOver() {
   if (t > .7) {
     R(0, py, W, H - py, COL.ink); R(0, py, W, 2, COL.line);
     if (G.newRecord) { rr(96, py - 16, 168, 26, 6, COL.gold, COL.ink, 2); T('¡NUEVO RÉCORD!', 180, py - 8, { size: 9, font: F1, align: 'center', color: COL.ink }); }
-    const rows = [['Puntos', full(G.score), COL.gold], ['Nivel alcanzado', G.maxLevel + ' de 5', '#fff'], ['Cosas censuradas', full(G.censored), COL.pink], ['Duración de la cruzada', mmss(G.time), '#fff'], ['Récord personal', full(REC.score), COL.gold]];
+    const rows = [['Puntos', full(G.score), COL.gold], ['Nivel alcanzado', G.maxLevel + ' de ' + CFG.levels.length, '#fff'], ['Cosas censuradas', full(G.censored), COL.pink], ['Duración de la cruzada', mmss(G.time), '#fff'], ['Récord personal', full(REC.score), COL.gold]];
     rows.forEach((r, i) => { const y = py + 14 + i * 21; T(r[0], 24, y, { size: 14, color: COL.muted, weight: 600 }); T(r[1], 336, y, { size: 15, align: 'right', color: r[2] }); if (i < 4) R(24, y + 18, 312, 1, '#ffffff14'); });
     const a = [20, py + 122, 320, 40], b = [20, py + 168, 200, 34], c = [228, py + 168, 112, 34];
     const d = [20, py + 210, 154, 34], e = [180, py + 210, 160, 34];
@@ -933,11 +1065,11 @@ function buildCard() {
     T('LA CRUZADA DE LOS DECRETOS', 180, 80, { size: 7, font: F1, align: 'center', color: COL.gold });
     rr(16, 120, 328, 52, 8, 'rgba(11,15,26,.85)', COL.red, 2);
     T(win ? 'HAS CENSURADO TODO' : 'SEPULTADA EN EXPEDIENTES', 180, 132, { size: 11, font: F1, align: 'center', color: COL.red });
-    T(win ? 'menos la libertad' : 'nivel ' + G.maxLevel + ' de 5', 180, 150, { size: 13, align: 'center', color: COL.gold });
+    T(win ? 'menos la libertad' : 'nivel ' + G.maxLevel + ' de ' + CFG.levels.length, 180, 150, { size: 13, align: 'center', color: COL.gold });
     R(0, 400, W, H - 400, '#0b0f1a'); R(0, 400, W, 2, COL.line);
     T(full(G.score), 180, 424, { size: 26, font: F1, align: 'center', color: '#fff' });
     T('PUNTOS', 180, 458, { size: 8, font: F1, align: 'center', color: COL.gold });
-    const rows = [['Cosas censuradas', full(G.censored)], ['Nivel alcanzado', G.maxLevel + ' de 5'], ['Duración', mmss(G.time)]];
+    const rows = [['Cosas censuradas', full(G.censored)], ['Nivel alcanzado', G.maxLevel + ' de ' + CFG.levels.length], ['Duración', mmss(G.time)]];
     rows.forEach((r, i) => { T(r[0], 24, 488 + i * 22, { size: 14, color: COL.muted, weight: 600 }); T(r[1], 336, 488 + i * 22, { size: 14, align: 'right', color: '#fff' }); });
     rr(24, H - 62, 312, 34, 8, COL.pink);
     T('¿ME SUPERAS?', 180, H - 51, { size: 11, font: F1, align: 'center', color: '#fff' });
