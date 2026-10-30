@@ -551,7 +551,7 @@ function drawAlly(A) {
 
 /* ---------- nivel 6: MATERNIDAD OBLIGATORIA (minijuego de carriles) ---------- */
 // Niñas avanzan hacia EDUCACIÓN, SALUD o FUTURO. 1 impacto: triste, con bebé y lenta. 2 impactos: va a LA CASA DEL PADRE.
-const F6 = { lanes: [60, 180, 300], top: 128, spawnY: 482, door: [44, 540], shot: .35, speed: 300, walk: 40, slow: 20, back: 55, pts: [50, 100, 200] };
+const F6 = { lanes: [60, 180, 300], top: 128, spawnY: 482, door: [44, 540], shot: .35, speed: 300, walk: 75, slow: 22, back: 60, pts: [50, 100, 200] };
 const DEST = [['n6_dest_edu', 'EDUCACIÓN', '#facc15'], ['n6_dest_salud', 'SALUD', '#ff6b6b'], ['n6_dest_futuro', 'FUTURO', '#4ade80']];
 function startFinal() {
   Object.assign(G, { f6: { t: 0, next: 1.2, girls: [], count: [0, 0, 0, 0], ended: false, endT: 0, panel: false, id: 0 }, ally: null, rapidT: 0, tripleT: 0, freezeT: 0, wide: 0 });
@@ -624,7 +624,7 @@ function drawFinal() {
   drawFinalBg();
   const sorted = [...F.girls].sort((a, b) => (a.state === 'div') - (b.state === 'div') || a.y - b.y);
   for (const g of sorted) {
-    const bob = Math.sin(g.t * (g.hits ? 6 : 10)) > 0 ? 0 : 1;
+    const bob = Math.sin(g.t * (g.hits ? 3.5 : 16)) > 0 ? 0 : (g.hits ? 1 : 2);
     const k = g.state === 'div' ? 'n6_g' + (g.v % 6) + '_div' : 'n6_g' + g.v + (g.hits ? '_sad' : '_happy');
     spr(k, g.x, g.y + bob, .37, { flip: g.state === 'div' && g.x > F6.door[0] + 20 && false });
     if (g.state === 'div' && g.fx > 0) { sprC('n6_baby1', g.x - 10, g.y - 56 - (0.6 - g.fx) * 20, .3, { alpha: g.fx / .6 }); sprC('n6_baby2', g.x + 10, g.y - 56 - (0.6 - g.fx) * 20, .3, { alpha: g.fx / .6 }); }
