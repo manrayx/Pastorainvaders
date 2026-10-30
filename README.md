@@ -4,7 +4,9 @@ Videojuego web de sátira política en 8 bits, inspirado en Space Invaders. Func
 
 ## Cómo publicarlo
 Sitio estático: sube esta carpeta a un repositorio de GitHub y créalo en Render como **Static Site** (sin comando de build, carpeta de publicación `.`).
-Cuando tengas dominio, ponlo en `"shareUrl"` dentro de `index.html` (bloque `cfg`) y en `og:image` como URL absoluta.
+El juego está en https://pastorainvaders.party (dominio en Cloudflare, conectado al Worker `pastorainvaders`). Si cambias de dominio, actualiza `"shareUrl"` en el bloque `cfg` y `og:image`/`og:url` en `index.html`.
+
+Estadísticas: GoatCounter, cuenta manrayx.goatcounter.com. Visitas como `/pastorainvaders`; eventos como `pastora-partida`, `pastora-final-verdadero`, `pastora-fin-victoria`, `pastora-fin-derrota`, `pastora-compartir`, `pastora-yape-abierto-boton`, `pastora-yape-abierto-auto`, `pastora-yape-qr-guardado`, `pastora-mnry-juego-para-tu-marca`.
 
 ## Contenido
 - `index.html`: el juego completo (configuración de niveles, dificultad y puntos en el bloque `cfg`).
