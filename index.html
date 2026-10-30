@@ -106,8 +106,8 @@ body{touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-c
   "fireCooldown": 0.3,
   "bulletSpeed": 400,
   "maxBullets": 4,
-  "allyFirst": 14,
-  "allyEvery": [40, 60],
+  "allyFirst": 10,
+  "allyEvery": [25, 38],
   "powerDropChance": 0.08,
   "levels": [
     {"name":"EL ESCÁNDALO DEL HUACO","entry":"¡HAN DESCUBIERTO QUE LOS HUACOS TIENEN SEXO!","bg":"bg_desierto","sky":["#f2a65a","#f6d38b"],
@@ -390,7 +390,7 @@ function updateWave(dt, lv) {
     if (G.efire <= 0 && alive.length && G.ebullets.length < 3 + (G.level >> 1)) {
       G.efire = lv.fire * rand(.7, 1.3) * (1 - frac * .35);
       const byCol = {}; for (const e of alive) if (!e.hid && (!byCol[e.col] || e.y > byCol[e.col].y)) byCol[e.col] = e;
-      const shooters = Object.values(byCol); if (shooters.length) { const e = pick(shooters); eshot(e.x, e.y + e.h / 2, clamp((G.px - e.x) * .08, -25, 25), 125 + G.level * 10, lv.shot); }
+      const shooters = Object.values(byCol); if (shooters.length) { const e = pick(shooters); eshot(e.x, e.y + e.h / 2, clamp((G.px - e.x) * .08, -25, 25), 155 + G.level * 12, lv.shot); }
     }
   }
   // llegaron al suelo
@@ -412,18 +412,20 @@ function hitEnemy(e, lv) {
   addScore(e.small ? CFG.points.fast : CFG.points.common, e.x, e.y - 10);
   G.dying.push({ k: e.k, x: e.x, y: e.y, s: e.s, t: 0, life: lv.style === 'pop' ? .25 : .55, style: lv.style });
   boom(e.x, e.y);
-  if (Math.random() < CFG.powerDropChance) drop(pick(['pw_mayoria', 'pw_decreto', 'pw_confianza', 'pw_fe']), e.x, e.y);
+  if (Math.random() < CFG.powerDropChance) drop(pickPower(), e.x, e.y);
   // fila completa
-  if (!e.small && !G.rowsDone[e.row] && G.enemies.filter(o => o.row === e.row && !o.small).every(o => !o.alive)) { G.rowsDone[e.row] = true; addScore(CFG.points.row); drop(pick(['pw_mayoria', 'pw_decreto', 'pw_confianza', 'pw_fe']), e.x, e.y); floatText('¡FILA REGULADA! +' + CFG.points.row * G.mult, 180, e.y, COL.pink, 8); }
+  if (!e.small && !G.rowsDone[e.row] && G.enemies.filter(o => o.row === e.row && !o.small).every(o => !o.alive)) { G.rowsDone[e.row] = true; addScore(CFG.points.row); drop(pickPower(), e.x, e.y); floatText('¡FILA REGULADA! +' + CFG.points.row * G.mult, 180, e.y, COL.pink, 8); }
 }
 function countHit() { G.streak++; G.mult = Math.min(5, 1 + Math.floor(G.streak / 10)); if (G.streak % 10 === 0 && G.mult <= 5) floatText('MULTIPLICADOR ×' + G.mult, G.px, FEET - 90, COL.cyan, 8); }
+// el reloj (Cuestión de confianza) sale 1 de cada 10 veces; los otros tres, 3 de cada 10
+function pickPower() { const r = Math.random(); return r < .1 ? 'pw_confianza' : r < .4 ? 'pw_mayoria' : r < .7 ? 'pw_decreto' : 'pw_fe'; }
 function drop(k, x, y) { G.drops.push({ k, x, y, vy: k === 'pw_bill' ? 85 : 70, w: 22, h: 18, t: 0 }); }
 function collect(d) {
-  if (d.k === 'pw_bill') { addScore(CFG.points.bill, d.x, d.y - 10); SFX.bill(); G.power = Math.min(100, G.power + 25); if (G.power >= 100) milagro(); return; }
+  if (d.k === 'pw_bill') { addScore(CFG.points.bill, d.x, d.y - 10); SFX.bill(); G.power = Math.min(100, G.power + 34); if (G.power >= 100) milagro(); return; }
   SFX.power();
   if (d.k === 'pw_mayoria') { G.rapidT = 8; floatText('MAYORÍA PARLAMENTARIA', G.px, FEET - 80, COL.green); }
   if (d.k === 'pw_decreto') { G.wide = 1; floatText('DECRETO SUPREMO LISTO', G.px, FEET - 80, COL.gold); }
-  if (d.k === 'pw_confianza') { G.freezeT = 5; floatText('CUESTIÓN DE CONFIANZA', G.px, FEET - 80, COL.cyan); }
+  if (d.k === 'pw_confianza') { G.freezeT = G.boss ? 2 : 4; floatText('CUESTIÓN DE CONFIANZA', G.px, FEET - 80, COL.cyan); }
   if (d.k === 'pw_fe') { G.shield = 1; floatText('FE LEGISLATIVA', G.px, FEET - 80, COL.gold); }
 }
 function milagro() {
@@ -467,7 +469,7 @@ function updateBoss(dt, lv) {
     B.fire -= dt;
     if (B.fire <= 0) {
       const f = lv.boss.fire * (B.hp < B.max / 2 ? .75 : 1); B.fire = f * rand(.8, 1.2); B.attT = .45;
-      const by = B.y + B.h / 2 - 10, sp = 135 + G.level * 10;
+      const by = B.y + B.h / 2 - 10, sp = 165 + G.level * 12;
       if (B.key === 'b1') { for (const a of [-60, 0, 60]) eshot(B.x + a * .3, by, a, sp * .9, lv.shot); }
       else if (B.key === 'b2') { const dx = G.px - B.x; for (let i = -1; i <= 1; i++) eshot(B.x, by, dx * .35 + i * 45, sp, 'letter'); }
       else if (B.key === 'b3') { for (let i = 0; i < 3; i++) eshot(B.x + rand(-130, 130), B.y + rand(-10, 30), rand(-20, 20), sp * .8, 'rainbow'); }
