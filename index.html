@@ -211,7 +211,7 @@ const ASSETS = ['p_idle1','p_idle2','p_walk1','p_walk2','p_walk3','p_walk4','p_s
   'b1_idle','b1_att1','b1_att2','b1_dmg','b1_die','b2_idle','b2_att1','b2_att2','b2_dmg','b2_die',
   'b3_idle','b3_att1','b3_dmg','b3_die','b4_idle','b4_att1','b4_att2','b4_dmg','b4_die','b5_idle','b5_att1','b5_att2','b5_dmg','b5_cens'];
 // súbelo en 1 cada vez que cambies imágenes, para que los navegadores no usen las viejas
-const ASSET_V = 2;
+const ASSET_V = 3;
 let loaded = 0;
 for (const k of ASSETS) { const im = new Image(); im.onload = im.onerror = () => { loaded++; }; im.src = 'assets/' + k + '.png?v=' + ASSET_V; IMG[k] = im; }
 const ok = k => IMG[k] && IMG[k].complete && IMG[k].naturalWidth > 0;
@@ -281,7 +281,7 @@ function newGame() {
 }
 function L() { return CFG.levels[G.level]; }
 function startLevel(i) {
-  G.level = i; G.maxLevel = Math.max(G.maxLevel, i + 1); G.lostInLevel = false; G.gray = false;
+  G.level = i; G.maxLevel = Math.max(G.maxLevel, i + 1); G.lostInLevel = false; G.gray = false; G.bq = [];
   const lv = CFG.levels[i]; G.enemies = []; G.boss = null; G.phase = 'intro'; G.phaseT = 0;
   G.bullets = []; G.ebullets = []; G.drops = []; G.dying = [];
   const cols = lv.cols, rows = lv.rows, sx = cols >= 6 ? 50 : cols === 4 ? 66 : 58, sy = 46;
@@ -318,7 +318,8 @@ function boom(x, y, big) { G.fx.push({ k: big ? 'fx_ex2' : 'fx_ex1', x, y, t: 0,
 
 function updatePlay(dt) {
   const lv = L(); G.time += dt; G.phaseT += dt;
-  if (G.banner) { G.banner.t += dt; if (G.banner.t > G.banner.life) { const b = G.banner; G.banner = null; if (b.done) b.done(); } }
+  if (G.banner) { G.banner.t += dt; if (G.banner.t > G.banner.life) { const b = G.banner; G.banner = null; if (b.done) b.done(); if (!G.banner && G.bq && G.bq.length) G.banner = G.bq.shift(); } }
+  else if (G.bq && G.bq.length) G.banner = G.bq.shift();
   if (G.phase === 'intro' && G.phaseT > 2.2) { G.phase = 'wave'; G.phaseT = 0; }
   // jugadora
   const left = keys.ArrowLeft || keys.a || keys.A || touch.left, right = keys.ArrowRight || keys.d || keys.D || touch.right;
@@ -436,7 +437,12 @@ function hurt(force) {
   G.lives--; G.lostInLevel = true; G.hurtT = .6; G.invT = 1.8; G.shake = 1; G.flash = 1; G.streak = 0; G.mult = 1; SFX.hurt();
   if (G.lives <= 0) { G.phase = 'dead'; G.phaseT = 0; MUSIC.on = false; SFX.lose(); }
 }
-function banner(title, sub, life = 2, done) { G.banner = { t: 0, life, kind: 'msg', title, sub, done }; }
+// si hay un cartel que hace avanzar el juego (con done), los demás esperan en cola para no reemplazarlo
+function banner(title, sub, life = 2, done) {
+  const b = { t: 0, life, kind: 'msg', title, sub, done };
+  if (G.banner && G.banner.done && !done) { (G.bq || (G.bq = [])).push(b); return; }
+  G.banner = b;
+}
 
 /* ---------- jefes ---------- */
 function spawnBoss(lv) {
@@ -500,14 +506,15 @@ function clearSequence(lv) {
 
 /* ---------- aliado: el Maletín Milagroso ---------- */
 function updateAlly(dt) {
-  if (G.phase === 'intro' || G.phase === 'clear' || G.phase === 'dead') return;
+  const quiet = G.phase === 'intro' || G.phase === 'clear' || G.phase === 'dead';
+  if (G.phase === 'dead' || (quiet && !G.ally)) return;
   if (!G.ally) {
     G.allyT -= dt * (G.power < 30 ? 1.4 : 1);
     if (G.allyT <= 0) { const d = Math.random() < .5 ? 1 : -1; G.ally = { x: d > 0 ? -30 : W + 30, y: HUD + 22, d, t: 0, drops: 3 + (Math.random() < .5 ? 1 : 0), next: rand(.6, 1.2) }; SFX.bill(); }
     return;
   }
   const A = G.ally; A.t += dt; A.x += A.d * 62 * dt; A.next -= dt;
-  if (A.next <= 0 && A.drops > 0 && A.x > 30 && A.x < W - 30) { A.drops--; A.next = rand(.7, 1.3); drop('pw_bill', A.x, A.y + 10); }
+  if (!quiet && A.next <= 0 && A.drops > 0 && A.x > 30 && A.x < W - 30) { A.drops--; A.next = rand(.7, 1.3); drop('pw_bill', A.x, A.y + 10); }
   if (A.x < -40 || A.x > W + 40) { G.ally = null; G.allyT = rand(CFG.allyEvery[0], CFG.allyEvery[1]); }
 }
 function drawAlly(A) {
