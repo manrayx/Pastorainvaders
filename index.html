@@ -18,9 +18,8 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" type="image/png" href="assets/pl2.png">
 <link rel="apple-touch-icon" href="assets/pl2.png">
-<!-- GoatCounter (cuenta manrayx): las visitas de este juego se registran como /pastorainvaders… para no mezclarse con Keiko Tap Tap -->
-<script>window.goatcounter = { path: function (p) { return '/pastorainvaders' + (p === '/' ? '' : p); } };</script>
-<script data-goatcounter="https://manrayx.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
+<!-- GoatCounter: sitio propio del juego, pastorainvaders.goatcounter.com -->
+<script data-goatcounter="https://pastorainvaders.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
 <title>Pastora Invaders</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -141,7 +140,7 @@ body{touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-c
    Sátira política. Obra ficticia. Arte de personajes: MNRY.
    ========================================================================= */
 const CFG = JSON.parse(document.getElementById('cfg').textContent);
-function track(name) { try { if (window.goatcounter && window.goatcounter.count) window.goatcounter.count({ path: 'pastora-' + name, title: 'pastora-' + name, event: true }); } catch (e) {} }
+function track(name) { try { if (window.goatcounter && window.goatcounter.count) window.goatcounter.count({ path: name, title: name, event: true }); } catch (e) {} }
 const W = 360, H = 640, HUD = 44, FEET = 548, CTRL = 562;
 const F1 = '"Press Start 2P", ui-monospace, monospace';
 const F2 = '"Pixelify Sans", system-ui, sans-serif';
